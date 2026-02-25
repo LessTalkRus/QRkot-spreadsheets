@@ -29,7 +29,6 @@ fastapi-cli==0.0.5
 fastapi-users==13.0.0
 fastapi-users-db-sqlalchemy==6.0.1
 filelock==3.14.0
-flake8==7.0.0
 freezegun==1.2.1
 frozenlist==1.8.0
 google-auth==2.48.0

@@ -22,7 +22,37 @@ async def get_report(
     session: AsyncSession = Depends(get_async_session),
     wrapper_services: Aiogoogle = Depends(get_service)
 ):
-    """Только для суперюзеров."""
+    """
+    Сформировать Google-отчёт по закрытым благотворительным проектам.
+
+    Доступно только суперпользователям.
+
+    Эндпоинт создаёт Google Spreadsheet в Google Drive и заполняет его
+    отчётом «Топ проектов по скорости закрытия».
+
+    Алгоритм работы:
+    1. Получаются завершённые проекты, отсортированные по скорости закрытия.
+    2. Рассчитывается длительность сбора средств для каждого проекта.
+    3. Формируется структура таблицы.
+    4. Создаётся Google Spreadsheet через Google Drive API.
+    5. Выдаются права доступа сервисному аккаунту.
+    6. Таблица заполняется данными через Google Sheets API.
+    7. Возвращается ссылка на созданный документ.
+
+    Структура таблицы:
+    - Дата формирования отчёта
+    - Заголовок отчёта
+    - Название проекта
+    - Время сбора средств
+    - Описание проекта
+
+    Пример запроса:
+    POST /google/
+    Authorization: Bearer <superuser_token>
+
+    Пример ответа:
+    "https://docs.google.com/spreadsheets/d/1AbCDefGhIjKlMnOpQrStUvWxYz/edit"
+    """
     table_body = await format_data_report(
         dict(
             name=project.name,

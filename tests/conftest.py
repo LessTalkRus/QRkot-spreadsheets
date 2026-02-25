@@ -3,10 +3,17 @@ from pathlib import Path
 
 import pytest
 import pytest_asyncio
+from freezegun import freeze_time
 from mixer.backend.sqlalchemy import Mixer
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+
+
+@pytest.fixture
+def freezer():
+    with freeze_time() as frozen:
+        yield frozen
 
 try:
     from app.main import app  # noqa

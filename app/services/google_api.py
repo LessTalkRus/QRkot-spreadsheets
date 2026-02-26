@@ -4,7 +4,8 @@ from datetime import datetime
 from aiogoogle import Aiogoogle
 
 from app.core.config import settings
-from app.core.constants import DATE_FORMAT, TABLE_VALUES
+from app.core.constants import (DATE_FORMAT, HOURS_IN_DAY, MINUTES_IN_HOUR,
+                                SECONDS_IN_MINUTE, TABLE_VALUES)
 
 SPREADSHEET_BODY_TEMPLATE = dict(
     properties=dict(
@@ -26,9 +27,11 @@ SPREADSHEET_BODY_TEMPLATE = dict(
 def format_time(time_in_days: float) -> str:
     days = int(time_in_days)
     fractional_day = time_in_days - days
-    hours = int(fractional_day * 24)
-    minutes = int((fractional_day * 24 - hours) * 60)
-    seconds = int(((fractional_day * 24 - hours) * 60 - minutes) * 60)
+    hours = int(fractional_day * HOURS_IN_DAY)
+    minutes = int((fractional_day * HOURS_IN_DAY - hours) * MINUTES_IN_HOUR)
+    seconds = int(((
+        fractional_day * HOURS_IN_DAY - hours
+    ) * MINUTES_IN_HOUR - minutes) * SECONDS_IN_MINUTE)
     if days > 1:
         return f'{days} days {hours:02d}:{minutes:02d}:{seconds:02d}'
     return f'{days} day, {hours:02d}:{minutes:02d}:{seconds:02d}'

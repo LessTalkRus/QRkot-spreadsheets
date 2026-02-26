@@ -1,13 +1,19 @@
+from http import HTTPStatus
+
 from aiogoogle import Aiogoogle
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_async_session
-from app.core.google_client import get_service
+from app.core.google_client import (GoogleAPIError,
+                                    GoogleAuthError,
+                                    get_service)
 from app.core.user import current_superuser
 from app.crud.charity_project import charity_project_crud
-from app.services.google_api import (format_data_report, format_time,
-                                     set_user_permissions, spreadsheets_create,
+from app.services.google_api import (format_data_report,
+                                     format_time,
+                                     set_user_permissions,
+                                     spreadsheets_create,
                                      spreadsheets_update_value)
 
 router = APIRouter()
@@ -53,23 +59,48 @@ async def get_report(
     Пример ответа:
     "https://docs.google.com/spreadsheets/d/1AbCDefGhIjKlMnOpQrStUvWxYz/edit"
     """
-    table_body = await format_data_report(
-        dict(
-            name=project.name,
-            time=format_time(project.time),
-            description=project.description,
-        ) for project in
-        await charity_project_crud.get_projects_by_completion_rate(session)
-    )
+    try:
+        table_body = await format_data_report(
+            dict(
+                name=project.name,
+                time=format_time(project.time),
+                description=project.description,
+            ) for project in
+            await charity_project_crud.get_projects_by_completion_rate(session)
+        )
 
-    spreadsheet_id, spreadsheet_url = await spreadsheets_create(
-        wrapper_services
-    )
+        spreadsheet_id, spreadsheet_url = await spreadsheets_create(
+            wrapper_services
+        )
 
-    await set_user_permissions(spreadsheet_id, wrapper_services)
-    await spreadsheets_update_value(
-        wrapper_services,
-        spreadsheet_id,
-        table_body,
-    )
-    return spreadsheet_url
+        await set_user_permissions(spreadsheet_id, wrapper_services)
+        try:
+            await spreadsheets_update_value(
+                wrapper_services,
+                spreadsheet_id,
+                table_body,
+            )
+        except ValueError as e:
+            raise HTTPException(
+                status_code=HTTPStatus.BAD_REQUEST,
+                detail="Некорректные данные для заполнения таблицы.",
+            ) from e
+
+        return spreadsheet_url
+    except GoogleAuthError as e:
+        raise HTTPException(
+            status_code=HTTPStatus.SERVICE_UNAVAILABLE,
+            detail='Ошибка аутентификации в Google API.',
+        ) from e
+
+    except GoogleAPIError as e:
+        raise HTTPException(
+            status_code=HTTPStatus.SERVICE_UNAVAILABLE,
+            detail='Сервис Google временно недоступен.',
+        ) from e
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            detail='Внутренняя ошибка сервера.',
+        ) from e
